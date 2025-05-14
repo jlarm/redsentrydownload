@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -64,10 +63,23 @@ func main() {
 		log.Fatalf("Failed to get scan dates. Status: %d\nBody: %s\n", resp.StatusCode, string(body))
 	}
 
-	var prettyJSON bytes.Buffer
-	if err := json.Indent(&prettyJSON, body, "", " "); err != nil {
-		log.Fatalf("Failed to format JSON %v", err)
+	type ScanResult struct {
+		ID     int    `json:"id"`
+		Date   string `json:"date"`
+		Status string `json:"status"`
 	}
 
-	fmt.Printf("Response:\n%s\n", prettyJSON.String())
+	var scanResults []ScanResult
+	if err := json.Unmarshal(body, &scanResults); err != nil {
+		log.Fatalf("Failed to parse JSON response %v", err)
+	}
+
+	var scanIDs []int
+	for _, result := range scanResults {
+		if result.Status == "done" {
+			scanIDs = append(scanIDs, result.ID)
+		}
+	}
+
+	fmt.Println("Scan IDs:", scanIDs)
 }
