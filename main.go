@@ -14,10 +14,4 @@ func main() {
 	}
 
 	fmt.Println("Access Token: ", token)
-
-	if auth.IsTokenValid() {
-		fmt.Println("Token is valid")
-	} else {
-		fmt.Println("Token is not valid")
-	}
 }
