@@ -120,15 +120,15 @@ func main() {
 
 	fmt.Printf("Downloading PDF reports to folder: %v", reportDir)
 	for _, scanID := range scanIDs {
-		downloadPDFReport(token, id, scanID, reportDir, reportType)
+		downloadPDFReport(token, id, scanID, reportDir, scannerType, reportType)
 	}
 
 	fmt.Println("All reports downloaded successfully")
 }
 
-func downloadPDFReport(token, sentryID string, scanID int, outputDir string, reportType string) {
+func downloadPDFReport(token, sentryID string, scanID int, outputDir string, scanType string, reportType string) {
 	baseURL := os.Getenv("REDSENTRY_API_URL")
-	url := fmt.Sprintf("%s/scanners/external/%s/report/%s?format=pdf&scan_id=%d", baseURL, sentryID, reportType, scanID)
+	url := fmt.Sprintf("%s/scanners/%s/%s/report/%s?format=pdf&scan_id=%d", baseURL, scanType, sentryID, reportType, scanID)
 
 	fmt.Printf("Downloading report for scan ID %d...\n", scanID)
 
