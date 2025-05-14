@@ -33,12 +33,36 @@ func main() {
 		log.Fatalf("ID cannot be empty")
 	}
 
+	fmt.Print("Select scanner type (internal/external): ")
+	scannerType, err := reader.ReadString('\n')
+	if err != nil {
+		log.Fatalf("Failed to read input: %v", err)
+	}
+
+	scannerType = strings.TrimSpace(scannerType)
+
+	if scannerType != "internal" && scannerType != "external" {
+		log.Fatalf("Invalid scanner type. Must be 'internal' or 'external'")
+	}
+
+	fmt.Print("Select report type (executive/technical): ")
+	reportType, err := reader.ReadString('\n')
+	if err != nil {
+		log.Fatalf("Failed to read input: %v", err)
+	}
+
+	reportType = strings.TrimSpace(reportType)
+
+	if reportType != "executive" && reportType != "technical" {
+		log.Fatalf("Invalid report type. Must be 'executive' or 'technical'")
+	}
+
 	baseURL := os.Getenv("REDSENTRY_API_URL")
 	if baseURL == "" {
 		log.Fatalf("REDSENTRY_API_URL environment variable is not set")
 	}
 
-	url := fmt.Sprintf("%s/scanners/external/%s/scan/dates", baseURL, id)
+	url := fmt.Sprintf("%s/scanners/%s/%s/scan/dates", baseURL, scannerType, id)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -84,22 +108,27 @@ func main() {
 
 	fmt.Println("Scan IDs:", scanIDs)
 
-	reportDir := fmt.Sprintf("reports_%s", id)
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatalf("Failed to get user home directory: %v", err)
+	}
+
+	reportDir := filepath.Join(homeDir, "Downloads", fmt.Sprintf("reports_%s", id))
 	if err := os.MkdirAll(reportDir, 0755); err != nil {
 		log.Fatalf("Failed to create report directory: %v", err)
 	}
 
 	fmt.Printf("Downloading PDF reports to folder: %v", reportDir)
 	for _, scanID := range scanIDs {
-		downloadPDFReport(token, id, scanID, reportDir)
+		downloadPDFReport(token, id, scanID, reportDir, reportType)
 	}
 
 	fmt.Println("All reports downloaded successfully")
 }
 
-func downloadPDFReport(token, sentryID string, scanID int, outputDir string) {
+func downloadPDFReport(token, sentryID string, scanID int, outputDir string, reportType string) {
 	baseURL := os.Getenv("REDSENTRY_API_URL")
-	url := fmt.Sprintf("%s/scanners/external/%s/report/executive?format=pdf&scan_id=%d", baseURL, sentryID, scanID)
+	url := fmt.Sprintf("%s/scanners/external/%s/report/%s?format=pdf&scan_id=%d", baseURL, sentryID, reportType, scanID)
 
 	fmt.Printf("Downloading report for scan ID %d...\n", scanID)
 
@@ -140,5 +169,5 @@ func downloadPDFReport(token, sentryID string, scanID int, outputDir string) {
 		return
 	}
 
-	fmt.Println("PDF report downloaded successfully for scan ID %d", scanID)
+	fmt.Printf("PDF report downloaded successfully for scan ID %d\n", scanID)
 }
