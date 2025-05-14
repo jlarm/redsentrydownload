@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"sync"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -15,6 +17,16 @@ type Credentials struct {
 	Username string
 	Password string
 }
+
+type TokenInfo struct {
+	Token     string
+	ExpiresAt time.Time
+}
+
+var (
+	tokenCache TokenInfo
+	tokenMutex sync.RWMutex
+)
 
 func LoadCredentials() (Credentials, error) {
 	_ = godotenv.Load()
@@ -73,6 +85,45 @@ func GetToken(creds Credentials) (string, error) {
 		return "", fmt.Errorf("token not found in response")
 	}
 
-	return token, nil
+	expiresIn := 3600.0
+	if exp, ok := responseBody["expires_in"].(float64); ok {
+		expiresIn = exp
+	}
 
+	tokenMutex.Lock()
+	tokenCache = TokenInfo{
+		Token:     token,
+		ExpiresAt: time.Now().Add(time.Duration(expiresIn) * time.Second),
+	}
+	tokenMutex.Unlock()
+
+	return token, nil
+}
+
+func IsTokenValid() bool {
+	tokenMutex.RLock()
+	defer tokenMutex.RUnlock()
+
+	if tokenCache.Token == "" || time.Now().After(tokenCache.ExpiresAt) {
+		return false
+	}
+
+	bufferTime := 30 * time.Second
+	return time.Now().Add(bufferTime).Before(tokenCache.ExpiresAt)
+}
+
+func GetValidToken() (string, error) {
+	if IsTokenValid() {
+		tokenMutex.RLock()
+		token := tokenCache.Token
+		tokenMutex.RUnlock()
+		return token, nil
+	}
+
+	creds, err := LoadCredentials()
+	if err != nil {
+		return "", fmt.Errorf("failed to load credentials: %v", err)
+	}
+
+	return GetToken(creds)
 }

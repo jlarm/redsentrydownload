@@ -8,16 +8,16 @@ import (
 )
 
 func main() {
-	creds, err := auth.LoadCredentials()
+	token, err := auth.GetValidToken()
 	if err != nil {
-		log.Fatalf("Failed to load credentials: %v", err)
-	}
-
-	token, err := auth.GetToken(creds)
-	if err != nil {
-		fmt.Println(err)
-		return
+		log.Fatalf("Failed to get valid token: %v", err)
 	}
 
 	fmt.Println("Access Token: ", token)
+
+	if auth.IsTokenValid() {
+		fmt.Println("Token is valid")
+	} else {
+		fmt.Println("Token is not valid")
+	}
 }
